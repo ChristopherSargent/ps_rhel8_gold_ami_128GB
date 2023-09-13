@@ -1,6 +1,6 @@
 ---
 # defaults file for ec2_ami_upgrade
-security_group_name: "ec2_instance-SG"
+security_group_name: "PS-Rhel8-Gold-AMI-SG"
 vpc_id: "vpc-075a92881928d8deb" #CDMPreStagingVPC
 cidr_ip: "52.61.62.104/32"
 rule_desc: "allow ssh"
