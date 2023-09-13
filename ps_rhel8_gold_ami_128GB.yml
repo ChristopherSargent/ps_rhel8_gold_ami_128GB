@@ -1,0 +1,9 @@
+---
+- name: Deploy EC2 Instance, dnf update and create PS-Rhel8-Gold-AMI-128GB-Latest AMI
+  hosts: localhost
+  gather_facts: no
+  become_user: root
+  tasks:
+    - include_role:
+        name: ps_rhel8_gold_ami_128GB
+

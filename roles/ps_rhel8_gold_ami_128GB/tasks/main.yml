@@ -1,0 +1,77 @@
+---
+# tasks file for ec2_ami_upgrade
+- name: Create a Security Group
+  amazon.aws.ec2_security_group:
+    name: "{{ security_group_name }}"
+    description: "Ansible_EC2_Security_Group"
+    vpc_id: "{{ vpc_id }}"
+    aws_region: "{{ aws_region }}"
+    rules:
+      - proto: tcp
+        ports:
+        - 22
+        cidr_ip: "{{ cidr_ip }}" #76.182.164.220/32
+        rule_desc: "{{ rule_desc }}" #"allow ssh for CAS"
+  register: security_group
+
+- ansible.builtin.debug:
+    var: security_group.group_id
+
+- name: Launch EC2 instance
+  amazon.aws.ec2_instance:
+    name: "{{ ec2_name }}"      
+    key_name: "{{ key_name }}"
+    instance_type: "{{ instance_type }}"
+    image_id: "{{ image_id }}"
+    vpc_subnet_id: "{{ vpc_subnet_id }}"
+    security_group: "{{ security_group.group_id }}"
+    iam_instance_profile: "cdm2-ec2RoleForSSM"
+    count: "{{ count }}"
+    aws_region: "{{ aws_region }}"
+    network:
+      assign_public_ip: true
+    tags:
+      Environment: PreStaging
+    user_data: "{{ lookup('file', 'user_data.sh') }}"
+    wait: yes
+  register: ec2_instance
+
+- ansible.builtin.debug:
+     var: ec2_instance.instances[0].public_ip_address
+
+- ansible.builtin.debug:
+    var: ec2_instance.instances[0].instance_id
+
+- name: Wait for SSH/SSM to become available
+  wait_for:
+    host: "{{ ec2_instance.instances[0].public_ip_address }}"
+    port: 22
+    delay: 30
+    timeout: 600
+
+- name: Sleep for 300 seconds to allow dnf upgrade
+  ansible.builtin.wait_for:
+    timeout: 300
+  delegate_to: localhost
+
+- name: Create latest AMI
+  amazon.aws.ec2_ami:
+    instance_id: "{{ ec2_instance.instances[0].instance_id }}"
+    wait: true
+    name: "{{ ami_name }}"
+    aws_region: "{{ aws_region }}"
+    tags:
+      Name: "{{ ami_name }}"
+  register: ami_info
+  when: ec2_instance.changed
+
+- ansible.builtin.debug:
+    var: ami_info.image_id
+
+- name: Terminate EC2 instance
+  amazon.aws.ec2_instance:
+    state: terminated
+    aws_region: "{{ aws_region }}"
+    instance_ids: "{{ ec2_instance.instances[0].instance_id }}"
+  when: ec2_instance.changed
+
