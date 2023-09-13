@@ -33,4 +33,4 @@ dnf upgrade -y
 
 4. https://console.amazonaws-us-gov.com/ > EC2 > AMI > Owned by me > PS-Rhel8-Gold-AMI-128GB-Latest
 
-![Screenshot](resources/screenshot3.JPG) 
+![Screenshot](resources/screenshot4.JPG) 
